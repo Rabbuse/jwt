@@ -1,0 +1,21 @@
+{
+    "name": "rabbuse/jwt",
+    "description": "my jwt class",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Rabbuse",
+            "email": "708877713@qq.com"
+        }
+    ],
+    "version": "1.0.0",
+    "require": {
+        "php": ">=7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "rabbuse\\jwt\\": "src/"
+        }
+    }
+}
