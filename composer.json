@@ -15,7 +15,7 @@
     },
     "autoload": {
         "psr-4": {
-            "rabbuse\\jwt\\": "src/"
+            "Rabbuse\\Jwt\\": "src"
         }
     }
 }
