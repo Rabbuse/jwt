@@ -94,7 +94,8 @@ class JWT
 
     public static function decode(string $jwt, string $key)
     {
-
+        echo $jwt;
+        var_dump($key);
     }
 
     /**
