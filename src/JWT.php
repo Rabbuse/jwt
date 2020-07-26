@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 namespace Rabbuse\Jwt;
 
-use Rabbuse\Jwt\util\{HMAC};
+use Rabbuse\Jwt\util\{HMAC, OPENSSL};
 
 class JWT
 {
@@ -38,9 +38,9 @@ class JWT
         // 'PS256' => ['a' => 1, 'b' => 2],
         // 'PS384' => ['a' => 1, 'b' => 2],
         // 'PS512' => ['a' => 1, 'b' => 2],
-        // 'RS256' => ['a' => 1, 'b' => 2],
-        // 'RS384' => ['a' => 1, 'b' => 2],
-        // 'RS512' => ['a' => 1, 'b' => 2],
+         'RS256' => ['function' => 'openssl', 'param' => 'sha256'],
+         'RS384' => ['function' => 'openssl', 'param' => 'sha384'],
+         'RS512' => ['function' => 'openssl', 'param' => 'sha512'],
         // 'ES256' => ['a' => 1, 'b' => 2],
         // 'ES256K' => ['a' => 1, 'b' => 2],
         // 'ES384' => ['a' => 1, 'b' => 2],
@@ -280,6 +280,9 @@ class JWT
             case 'hash_hmac':
                 $hmac = new HMAC($info['param']);
                 return $hmac->encrypt($str, $key);
+            case 'openssl':
+                $ssl = new OPENSSL($info['param']);
+                return $ssl->encrypt($str, $key);
             default:
                 throw new EncodeException('encrypt type error!');
         }
@@ -372,6 +375,12 @@ class JWT
                     throw new DecodeException('sign verification failed!');
                 }
             break;
+            case 'openssl':
+                $ssl = new OPENSSL($info['param']);
+                if (!$ssl->decrypt($str, $key, $sign)) {
+                    throw new DecodeException('sign verification failed!');
+                }
+                break;
             default:
                 throw new DecodeException('decrypt type error!');
         }
