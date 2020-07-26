@@ -30,21 +30,22 @@ class JWT
     //jwt的加密类型
     protected $alg = 'HS256';
 
+    //允许的加密类型
     private static $allow_alg = [
         'HS256' => ['function' => 'hash_hmac', 'param' => 'sha256'],
         'HS384' => ['function' => 'hash_hmac', 'param' => 'sha384'],
         'HS512' => ['function' => 'hash_hmac', 'param' => 'sha512'],
-        'PS256' => ['a' => 1, 'b' => 2],
-        'PS384' => ['a' => 1, 'b' => 2],
-        'PS512' => ['a' => 1, 'b' => 2],
-        'RS256' => ['a' => 1, 'b' => 2],
-        'RS384' => ['a' => 1, 'b' => 2],
-        'RS512' => ['a' => 1, 'b' => 2],
-        'ES256' => ['a' => 1, 'b' => 2],
-        'ES256K' => ['a' => 1, 'b' => 2],
-        'ES384' => ['a' => 1, 'b' => 2],
-        'ES512' => ['a' => 1, 'b' => 2],
-        'EdDSA' => ['a' => 1, 'b' => 2],
+        // 'PS256' => ['a' => 1, 'b' => 2],
+        // 'PS384' => ['a' => 1, 'b' => 2],
+        // 'PS512' => ['a' => 1, 'b' => 2],
+        // 'RS256' => ['a' => 1, 'b' => 2],
+        // 'RS384' => ['a' => 1, 'b' => 2],
+        // 'RS512' => ['a' => 1, 'b' => 2],
+        // 'ES256' => ['a' => 1, 'b' => 2],
+        // 'ES256K' => ['a' => 1, 'b' => 2],
+        // 'ES384' => ['a' => 1, 'b' => 2],
+        // 'ES512' => ['a' => 1, 'b' => 2],
+        // 'EdDSA' => ['a' => 1, 'b' => 2],
     ];
 
     private function __construct()
@@ -71,6 +72,7 @@ class JWT
     }
 
     /**
+     * 生成jwt
      * @param array $data
      * @param string $key
      * @return string
@@ -79,6 +81,9 @@ class JWT
      */
     public function encode(array $data, string $key)
     {
+        if (empty($key)) {
+            throw new EncodeException('key cannot be empty!');
+        }
         $header = $this->createHeader();
         if (!$header) {
             throw new EncodeException('header create error!');
@@ -92,10 +97,37 @@ class JWT
     }
 
 
-    public static function decode(string $jwt, string $key)
+    /**
+     * 解析jwt
+     * @param string $jwt
+     * @param string $key
+     * @return mixed
+     * @throws DecodeException
+     */
+    public function decode(string $jwt, string $key)
     {
-        echo $jwt;
-        var_dump($key);
+        $arr = explode('.', $jwt);
+        if (count($arr) !== 3) {
+            throw new DecodeException('jwt format error!');
+        } 
+        if (empty($key)) {
+            throw new DecodeException('key cannot be empty!');
+        }
+        //拆解jwt
+        $array = $this->decodeArray($arr);
+        list($header, $payload, $sign) = $array;
+        //验证jwt的合法性
+        $this->verify("{$arr[0]}.{$arr[1]}", $sign, $key, $header->alg);
+        if (!empty($payload->nbf) && $payload->nbf > time()) {
+            throw new DecodeException('jwt not in force!');
+        }
+        if (!empty($payload->iat) && $payload->iat > time()) {
+            throw new DecodeException('jwt create time error!');
+        }
+        if (!empty($payload->exp) && $payload->exp <= time()) {
+            throw new DecodeException('jwt is expire!');
+        }
+        return $payload;
     }
 
     /**
@@ -243,7 +275,7 @@ class JWT
         if (!isset(self::$allow_alg[$this->alg])) {
             throw new EncodeException('alg is not allow!');
         }
-        $info = (self::$allow_alg[$this->alg]);
+        $info = self::$allow_alg[$this->alg];
         switch ($info['function']) {
             case 'hash_hmac':
                 $hmac = new HMAC($info['param']);
@@ -289,5 +321,60 @@ class JWT
             $data .= substr('====', $mod4);
         }
         return base64_decode($data);
+    }
+
+
+    /**
+     * @param array $data
+     * @return array
+     * @throws DecodeException
+     */
+    private function decodeArray(array $data)
+    {
+        list($header, $payload, $sign) = $data;
+        $header = json_decode($this->base64_url_decode($header));
+        if (empty($header)) {
+            throw new DecodeException('header decode error!');
+        }
+        if (empty($header->alg) || !isset(self::$allow_alg[$header->alg])) {
+            throw new DecodeException('alg is not allow!');
+        }
+        $payload = json_decode($this->base64_url_decode($payload));
+        if (empty($payload)) {
+            throw new DecodeException('payload decode error!');
+        }
+        $sign = $this->base64_url_decode($sign);
+        if (empty($sign)) {
+            throw new DecodeException('invalid sign!');
+        }
+        return [$header, $payload, $sign];
+    }
+
+    /**
+     * @param string $str
+     * @param string $sign
+     * @param string $key
+     * @param string $alg
+     * @return bool
+     * @throws DecodeException
+     * @throws util\SignException
+     */
+    private function verify(string $str, string $sign, string $key, string $alg)
+    {
+        if (!isset(self::$allow_alg[$alg])) {
+            throw new DecodeException('alg is not allow!');
+        }
+        $info = self::$allow_alg[$alg];
+        switch ($info['function']) {
+            case 'hash_hmac':
+                $hmac = new HMAC($info['param']);
+                if (!$hmac->decrypt($str, $key, $sign)) {
+                    throw new DecodeException('sign verification failed!');
+                }
+            break;
+            default:
+                throw new DecodeException('decrypt type error!');
+        }
+        return true;
     }
 }

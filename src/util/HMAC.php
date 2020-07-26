@@ -22,8 +22,9 @@ class HMAC
     }
 
 
-    public function decrypt()
+    public function decrypt(string $str, string $key, string $sign)
     {
-
+        $hash = hash_hmac($this->algo, $str, $key, true);
+        return hash_equals($sign, $hash);
     }
 }
