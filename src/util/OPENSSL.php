@@ -34,6 +34,8 @@ class OPENSSL
         if (!$key) {
             throw new SignException('get publickey error!');
         }
-        return openssl_verify($str, $sign, $key, $this->algo);
+        $verify = openssl_verify($str, $sign, $key, $this->algo);
+        openssl_free_key($key);
+        return $verify;
     }
 }
