@@ -38,13 +38,13 @@ class JWT
         // 'PS256' => ['a' => 1, 'b' => 2],
         // 'PS384' => ['a' => 1, 'b' => 2],
         // 'PS512' => ['a' => 1, 'b' => 2],
-         'RS256' => ['function' => 'openssl', 'param' => 'sha256'],
-         'RS384' => ['function' => 'openssl', 'param' => 'sha384'],
-         'RS512' => ['function' => 'openssl', 'param' => 'sha512'],
-        // 'ES256' => ['a' => 1, 'b' => 2],
-        // 'ES256K' => ['a' => 1, 'b' => 2],
-        // 'ES384' => ['a' => 1, 'b' => 2],
-        // 'ES512' => ['a' => 1, 'b' => 2],
+         'RS256' => ['function' => 'openssl_rs', 'param' => 'sha256'],
+         'RS384' => ['function' => 'openssl_rs', 'param' => 'sha384'],
+         'RS512' => ['function' => 'openssl_rs', 'param' => 'sha512'],
+         'ES256' => ['function' => 'openssl_es', 'param' => 'sha256'],
+        // 'ES256K' => ['function' => 'openssl_es', 'param' => 'sha256'],
+         'ES384' => ['function' => 'openssl_es', 'param' => 'sha384'],
+         'ES512' => ['function' => 'openssl_es', 'param' => 'sha512'],
         // 'EdDSA' => ['a' => 1, 'b' => 2],
     ];
 
@@ -280,9 +280,12 @@ class JWT
             case 'hash_hmac':
                 $hmac = new HMAC($info['param']);
                 return $hmac->encrypt($str, $key);
-            case 'openssl':
+            case 'openssl_rs':
                 $ssl = new OPENSSL($info['param']);
                 return $ssl->encrypt($str, $key);
+            case 'openssl_es':
+                $ssl = new OPENSSL($info['param']);
+                return $ssl->encryptWithEs($str, $key);
             default:
                 throw new EncodeException('encrypt type error!');
         }
@@ -371,18 +374,21 @@ class JWT
         switch ($info['function']) {
             case 'hash_hmac':
                 $hmac = new HMAC($info['param']);
-                if (!$hmac->decrypt($str, $key, $sign)) {
-                    throw new DecodeException('sign verification failed!');
-                }
+                $res = $hmac->decrypt($str, $key, $sign);
             break;
-            case 'openssl':
+            case 'openssl_rs':
                 $ssl = new OPENSSL($info['param']);
-                if (!$ssl->decrypt($str, $key, $sign)) {
-                    throw new DecodeException('sign verification failed!');
-                }
+                $res = $ssl->decrypt($str, $key, $sign);
+                break;
+            case 'openssl_es':
+                $ssl = new OPENSSL($info['param']);
+                $res = $ssl->decrypt($str, $key, $sign);
                 break;
             default:
                 throw new DecodeException('decrypt type error!');
+        }
+        if (!$res) {
+            throw new DecodeException('sign verification failed!');
         }
         return true;
     }
