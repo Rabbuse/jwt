@@ -106,10 +106,11 @@ class JWT
      */
     public function decode(string $jwt, string $key)
     {
+        $jwt = trim(str_replace(['Bearer', 'bearer'], '', $jwt));
         $arr = explode('.', $jwt);
         if (count($arr) !== 3) {
             throw new DecodeException('jwt format error!');
-        } 
+        }
         if (empty($key)) {
             throw new DecodeException('key cannot be empty!');
         }
